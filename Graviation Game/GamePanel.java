@@ -8,6 +8,7 @@ import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
+import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
@@ -20,6 +21,8 @@ import javax.swing.Timer;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
+import javafx.scene.image.ImageView;
+
 public class GamePanel extends JPanel 
 {
 	//Define constants
@@ -30,8 +33,8 @@ public class GamePanel extends JPanel
 	private final double minValue = 0.0;
 	private final double maxValue = 100.0;
 	private final double step = 0.1;
-	private final int SIZE = 50; 
-
+	private final int SIZE = 40; 
+	private final int STRING = 1, DOUBLE = 0;
 	//Define variables
 	private JButton cmdStart, cmdRestart;
 	private String[] backgroundStrings = {"Earth", "Moon", "Mars", "Saturn"}; 
@@ -49,15 +52,16 @@ public class GamePanel extends JPanel
 		//Creating Buttons and their listeners 
 		//*****************************************************
 		cmdStart = new JButton("Start");
-		cmdRestart = new JButton("Restart");
+		cmdRestart = new JButton("Reset");
 
 		cmdStart.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				p.start();
+				p.start();					
 			}
 		});
 		cmdRestart.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
+				cmdStart.setText("Start");
 				p.restart();
 			}
 		});
@@ -72,7 +76,7 @@ public class GamePanel extends JPanel
 		elasticitySpinner = new JSpinner(modelE);
 		heightSpinner = new JSpinner(modelH);
 
-		
+
 		//Adding listeners to combo box and Spinners
 		//******************************************************
 		backgroundComboBox.addActionListener(new ActionListener() {
@@ -86,25 +90,24 @@ public class GamePanel extends JPanel
 
 		gravitationSpinner.addChangeListener(new ChangeListener() {
 			public void stateChanged(ChangeEvent e) {
-				p.gravitation = (double) modelG.getValue();
-				JOptionPane.showMessageDialog(null,"Gravitation changed to "+ p.gravitation);
+				p.gravitation = p.grav_backup = (double) modelG.getValue();
 			}
 		});
-		
+
 		elasticitySpinner.addChangeListener(new ChangeListener() {
 			public void stateChanged(ChangeEvent e) {
 				p.elasticity = (double) modelE.getValue();
-				JOptionPane.showMessageDialog(null,"Elasticity changed to "+ p.elasticity);
 			}
 		});
 
 		heightSpinner.addChangeListener(new ChangeListener() {
 			public void stateChanged(ChangeEvent e) {
-				p.height = (int)modelH.getValue();
-				JOptionPane.showMessageDialog(null,"Height changed to " + p.height);
+				p.set_y((int)modelH.getValue());
+				p.repaint();
 			}
 		});
-		
+
+
 		//Creating labels
 		//******************************************************
 		backgroundLabel = new JLabel("Background");
@@ -156,15 +159,29 @@ public class GamePanel extends JPanel
 		private int x, y, height;
 		private Timer timer;
 		private boolean firstRun = true;
-
+		private double v0 = 0;
+		private double grav_backup;
+		private int start_height;
+		private double SCREEN;
+		private int meter;
 		public Play()
 		{
-			timer = new Timer(10, this);
-			backgroundPicture = "earth.jpg"; 
+			timer = new Timer(100, this);
+			initializtion();
+			place = "C:\\Users\\ItamarSharify\\workspace\\GravitationGame\\src\\";
+		}
+		public void set_y(int height)
+		{
+			y = this.getHeight()-height*meter;
+		}
+		private void initializtion()
+		{
 			height = defaultHeight;
+			start_height = this.getHeight()-height*meter;
+			backgroundPicture = "earth.jpg"; 
 			gravitation = G;
+			grav_backup = gravitation;
 			elasticity = COR;
-			place = "C:\\Users\\olesya\\workspace\\Ball\\src\\";
 		}
 		public void start() 
 		{ 
@@ -174,52 +191,80 @@ public class GamePanel extends JPanel
 		public void restart() //Back to default 
 		{
 			timer.stop();
-    		backgroundPicture = "earth.jpg"; 
-    		height = defaultHeight;
-    		gravitation = G;
-    		elasticity = COR;
-    		backgroundComboBox.setSelectedItem("Earth");
-    		gravitationSpinner.setValue(G);
-    		elasticitySpinner.setValue(COR);
-    		heightSpinner.setValue(defaultHeight);
-    		
-    		
+			timer = new Timer(100, this);
+			initializtion();
+			initSpinners("Earth", G, COR, defaultHeight);
+
 			x = (this.getWidth()-SIZE)/2; //middle of the screen
-			y = 0;
+			y = start_height;
 			velocity = 0;
+			v0 = 0;
 			time = 0; 
 			repaint(); 
 		}
-
+		private void initSpinners(String planet, double G, double COR, int defaultHeight)
+		{
+			backgroundComboBox.setSelectedItem(planet);
+			gravitationSpinner.setValue(G);
+			elasticitySpinner.setValue(COR);
+			heightSpinner.setValue(defaultHeight);
+			grav_backup = G;
+		}
 		public void changeBackground()
 		{
+			restart();
 			backgroundPicture = picture + ".jpg";
+			switch(picture)
+			{
+			case "Earth":
+				initSpinners("Earth", 9.8, elasticity, defaultHeight);
+				break;
+			case "Moon":
+				initSpinners("Moon", 1.6, elasticity, defaultHeight);
+				break;
+			case "Mars":
+				initSpinners("Mars", 3.8, elasticity, defaultHeight);
+				break;
+			case "Saturn":
+				initSpinners("Saturn", 5, elasticity, defaultHeight);
+				break;
+			}
+
 			repaint(); 
 
 		}
 		@Override
 		public void actionPerformed(ActionEvent e) 
 		{
-			int delta;
-			time += 0.1;
+			//case the ball goes down
+			if (gravitation>0)
+			{
+				y += (int)(v0*time + 0.5*(gravitation*time*time));//calc the next place
+				if(y > SCREEN-SIZE)//the ball has hit the floor
+				{
+					y = this.getHeight() - SIZE;//reset the height - because not always it'll reach the floor perfectly 
+					gravitation = -grav_backup;//reverse the gravitaion
+					v0 = Math.abs((velocity-grav_backup)*elasticity);
+					System.out.println("END OF SCREEN");
+					time = 0;
+					velocity = v0;
+				}
+			}
+			//case the ball goes up
+			else if(gravitation<0)
+			{
+				y -= (int)(v0*time + 0.5*(gravitation*time*time));//calc the next place
+				if(velocity <=0)
+				{
+					gravitation = grav_backup;
+					System.out.println("changed direction");
+					time = 0;
+					v0 = 0;
+				}
+			}
+			System.out.println("Time: "+time+" Y: "+y+ ", V0: "+v0+" V: "+velocity+" A: "+gravitation);
 			velocity += gravitation; 
-			int beforeY = y;
-			y = beforeY + (int)(velocity*time + 0.5*(gravitation*time*time));
-			
-			delta = Math.abs(y-beforeY);
-			if(velocity <= 0)
-			{
-				gravitation = gravitation*-1;
-			}
-			if(y > this.getHeight() - SIZE)
-			{
-				y = this.getHeight() - SIZE;
-				gravitation = gravitation*-1;
-				velocity = velocity*elasticity;
-			}
-			if (delta < 1 )
-				timer.stop();
-	
+			time += 1;
 			repaint(); 
 
 		}
@@ -228,22 +273,26 @@ public class GamePanel extends JPanel
 		{
 			super.paintComponent(g);
 			Graphics2D g2d = (Graphics2D) g;
-	
+
 			//If running first time, define x,y at the top in the middle
 			if(firstRun)
 			{
 				x = (getWidth()-SIZE)/2; //middle of the screen
-				y = 0;
+				SCREEN = this.getHeight();
+				meter = (int) Math.round((SCREEN-(double)SIZE)/100);
+				start_height = this.getHeight()-height*meter;
+				y = start_height;
 				firstRun = false;
 			}
-			
+
 			Color c = new Color(73, 245, 0, 240); //Green
 			g2d.setColor(c);
-			Image img = Toolkit.getDefaultToolkit().getImage(place + backgroundPicture);
+//			Image img = Toolkit.getDefaultToolkit().getImage(place + backgroundPicture); // the default method to open images
+			Image img = new ImageIcon(this.getClass().getResource(backgroundPicture)).getImage();//relative opening
 			g2d.drawImage(img, 0, 0, this);	
-			
+
 			g2d.fillOval(x, y, SIZE, SIZE);
-			
+
 		}
 	}
 

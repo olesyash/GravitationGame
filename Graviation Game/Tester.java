@@ -7,7 +7,7 @@ public class Tester
 	    {
 	        JFrame frame = new JFrame("Tester");
 	        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-	        frame.setSize(618, 727);
+	        frame.setSize(618, 736);
 	        GamePanel g = new GamePanel();
 	        frame.add(g);
 	        frame.setVisible(true);

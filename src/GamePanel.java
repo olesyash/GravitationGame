@@ -8,6 +8,7 @@ import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
+import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
@@ -20,6 +21,8 @@ import javax.swing.Timer;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
+import javafx.scene.image.ImageView;
+
 public class GamePanel extends JPanel 
 {
 	//Define constants
@@ -31,7 +34,7 @@ public class GamePanel extends JPanel
 	private final double maxValue = 100.0;
 	private final double step = 0.1;
 	private final int SIZE = 40; 
-
+	private final int STRING = 1, DOUBLE = 0;
 	//Define variables
 	private JButton cmdStart, cmdRestart;
 	private String[] backgroundStrings = {"Earth", "Moon", "Mars", "Saturn"}; 
@@ -49,7 +52,7 @@ public class GamePanel extends JPanel
 		//Creating Buttons and their listeners 
 		//*****************************************************
 		cmdStart = new JButton("Start");
-		cmdRestart = new JButton("Restart");
+		cmdRestart = new JButton("Reset");
 
 		cmdStart.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
@@ -103,6 +106,7 @@ public class GamePanel extends JPanel
 				p.repaint();
 			}
 		});
+
 
 		//Creating labels
 		//******************************************************
@@ -232,27 +236,24 @@ public class GamePanel extends JPanel
 		@Override
 		public void actionPerformed(ActionEvent e) 
 		{
+			//case the ball goes down
 			if (gravitation>0)
 			{
-				y += (int)(v0*time + 0.5*(gravitation*time*time));	
-				if(y > SCREEN-SIZE)
+				y += (int)(v0*time + 0.5*(gravitation*time*time));//calc the next place
+				if(y > SCREEN-SIZE)//the ball has hit the floor
 				{
-					if (velocity<grav_backup)
-					{
-						timer.stop();
-						System.out.println("Stopped");
-					}
-					y = this.getHeight() - SIZE;
-					gravitation = -grav_backup;
-					v0 = (velocity-grav_backup)*elasticity;
-					System.out.println("END OF SCREEN "+(velocity-grav_backup)+"*0.8="+v0);
+					y = this.getHeight() - SIZE;//reset the height - because not always it'll reach the floor perfectly 
+					gravitation = -grav_backup;//reverse the gravitaion
+					v0 = Math.abs((velocity-grav_backup)*elasticity);
+					System.out.println("END OF SCREEN");
 					time = 0;
 					velocity = v0;
 				}
 			}
-			if(gravitation<0)
+			//case the ball goes up
+			else if(gravitation<0)
 			{
-				y -= (int)(v0*time + 0.5*(gravitation*time*time));
+				y -= (int)(v0*time + 0.5*(gravitation*time*time));//calc the next place
 				if(velocity <=0)
 				{
 					gravitation = grav_backup;
@@ -286,7 +287,8 @@ public class GamePanel extends JPanel
 
 			Color c = new Color(73, 245, 0, 240); //Green
 			g2d.setColor(c);
-			Image img = Toolkit.getDefaultToolkit().getImage(place + backgroundPicture);
+//			Image img = Toolkit.getDefaultToolkit().getImage(place + backgroundPicture); // the default method to open images
+			Image img = new ImageIcon(this.getClass().getResource(backgroundPicture)).getImage();//relative opening
 			g2d.drawImage(img, 0, 0, this);	
 
 			g2d.fillOval(x, y, SIZE, SIZE);
